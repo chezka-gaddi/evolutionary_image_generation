@@ -29,12 +29,18 @@ def graph_image(circles):
     #for c in circles:
     #    ax.add_patch(c)
 
+    #plt.figure(figsize=(5,5))
+    plt.subplots_adjust(0,0,1,1,0,0)
     plt.ion()
     plt.show()
+    plt.pause(.01)
+
+    plt.get_current_fig_manager().resize(500, 500)
     fig = plt.gcf()
-    plt.pause(.005)
     data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    print(fig.canvas.get_width_height())
     data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    img_pop.append(data)
 
 def init_pop(popSize, individualSize):
     population = []
@@ -62,7 +68,7 @@ def fitness(arr, img):
 
 
 individualSize = 100
-popSize = 5
+popSize = 25
 generations = 1
 
 population = init_pop(popSize, individualSize)
@@ -74,22 +80,23 @@ for g in range(generations):
     for q in population:
         graph_image(q)
 
-#Image.fromarray(np.uint8(imgArr)).show()
+img = Image.fromarray(np.uint8(img_pop[0]))
+img.save('pic.png')
 
 def circleFitness(circleIndividual, img):
     count = 0
     total = 0
     for x in range(WIDTH):
-    for y in range(HEIGHT):
-    total += abs(circleCheck(circleIndividual, (x, y)) - img[x][y][0]/255)
-    count += 1
+        for y in range(HEIGHT):
+            total += abs(circleCheck(circleIndividual, (x, y)) - img[x][y][0]/255)
+            count += 1
     return total / count
 
 def circleCheck(circleIndividual, point):
     val = 0
     for circle in circleIndividual:
-    if np.sqrt((point[0] - circle[0]) ** 2 + (point[1] - circle[1]) ** 2) < circle[2]:
-    val += (1 - val) * circle[3]
+        if np.sqrt((point[0] - circle[0]) ** 2 + (point[1] - circle[1]) ** 2) < circle[2]:
+            val += (1 - val) * circle[3]
     return val
 
 def triangleCheck(triangleIndividual, point):
