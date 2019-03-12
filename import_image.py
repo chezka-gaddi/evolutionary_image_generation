@@ -81,32 +81,6 @@ def new_generation(motherGene, popSize):
 
     return population
 
-def save_img(circles):
-    plt.clf()
-    plt.axis((0, WIDTH, 0, -HEIGHT))
-    plt.gca().invert_yaxis()
-    plt.gca().set_aspect('equal')
-    plt.axis('off')
-    ax = plt.gca()
-
-    for i in circles:
-        ax.add_artist(i)
-
-    plt.get_current_fig_manager().resize(HEIGHT, WIDTH)
-    plt.subplots_adjust(0,0,1,1,0,0)
-    plt.ion()
-    plt.gray()
-    plt.show()
-    plt.pause(.005)
-
-    fig = plt.gcf()
-    data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    gray = data[:,:,0]
-    img = Image.fromarray(np.uint8(gray))
-    img.save('pic.png')
-
-
 individualSize = 1
 popSize = 100
 generations = 1000
