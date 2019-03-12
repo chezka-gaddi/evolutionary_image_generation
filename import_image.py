@@ -5,20 +5,13 @@ from matplotlib.collections import PatchCollection
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import copy
+from operator import itemgetter
 
-img_pop = []
 imgArr = np.asarray(Image.open('eye.png'))
+#imgArr = imgArr[:,:,0]
 WIDTH = len(imgArr)
 HEIGHT = len(imgArr[0])
-
-def fitness(arr, img):
-    total = 0
-
-    for x in range(WIDTH):
-        for y in range(HEIGHT):
-            total = total + abs(arr[x][y] - img[x][y])
-
-    print(total)
 
 def make_circle(x, y, r, op):
     circle = plt.Circle((x, -y), r, color='black', alpha=op)
@@ -28,67 +21,111 @@ def graph_image(circles):
     plt.clf()
     plt.axis((0, WIDTH, 0, -HEIGHT))
     plt.gca().invert_yaxis()
-    #plt.gca().set_aspect('equal', adjustable='box')
     plt.gca().set_aspect('equal')
     plt.axis('off')
     ax = plt.gca()
 
-    colors = [0]*len(circles)
-    c = PatchCollection(circles, alpha=0.1)
-    c.set_array(np.array(colors))
-    ax.add_collection(c)
-    #for c in circles:
-    #    ax.add_patch(c)
+    for c in circles:
+        newPatch = copy.copy(c)
+        ax.add_patch(newPatch)
 
-    plt.get_current_fig_manager().resize(WIDTH, HEIGHT)
+    plt.get_current_fig_manager().resize(HEIGHT, WIDTH)
     plt.subplots_adjust(0,0,1,1,0,0)
     plt.ion()
+    plt.gray()
     plt.show()
-    plt.pause(.01)
+    plt.pause(.005)
 
     fig = plt.gcf()
     data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    print(fig.canvas.get_width_height())
     data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    print(len(data), len(data[0]))
-    img_pop.append(Image.fromarray(np.uint8(data)))
+    gray = data[:,:,0]
+
+    if gray.shape == imgArr.shape:
+        diff = abs(imgArr - gray)
+        fit = 1/(WIDTH*HEIGHT) * np.sum(diff)
+
+        genomes.append((fit, circles))
 
 def init_pop(popSize, individualSize):
     population = []
 
     for j in range(popSize):
         circles = []
-        h = int(HEIGHT*0.15)
+        h1 = int(HEIGHT / 20)
+        h2 = int(HEIGHT * 0.75)
 
         for i in range(individualSize):
             x, y = random.randint(1, WIDTH), random.randint(1, HEIGHT)
-            radius = random.randint(1, h)
+            radius = random.randint(h1, h2)
             circles.append(make_circle(x, y, radius, np.random.rand()))
 
         population.append(circles)
 
     return population
 
+def new_generation(motherGene, popSize):
+    population = []
 
-individualSize = 100
-popSize = 25
-generations = 1
+    for j in range(popSize):
+        circles = []
+        circles = circles + motherGene
+        h1 = int(HEIGHT / 20)
+        h2 = int(HEIGHT * .75)
+
+        x, y = random.randint(1, WIDTH), random.randint(1, HEIGHT)
+        radius = random.randint(h1, h2)
+        circles.append(make_circle(x, y, radius, np.random.rand()))
+
+        population.append(circles)
+
+    return population
+
+def save_img(circles):
+    plt.clf()
+    plt.axis((0, WIDTH, 0, -HEIGHT))
+    plt.gca().invert_yaxis()
+    plt.gca().set_aspect('equal')
+    plt.axis('off')
+    ax = plt.gca()
+
+    for i in circles:
+        ax.add_artist(i)
+
+    plt.get_current_fig_manager().resize(HEIGHT, WIDTH)
+    plt.subplots_adjust(0,0,1,1,0,0)
+    plt.ion()
+    plt.gray()
+    plt.show()
+    plt.pause(.005)
+
+    fig = plt.gcf()
+    data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    gray = data[:,:,0]
+    img = Image.fromarray(np.uint8(gray))
+    img.save('pic.png')
+
+
+individualSize = 1
+popSize = 100
+generations = 1000
 
 population = init_pop(popSize, individualSize)
-#population = sorted()
 
+radSize = HEIGHT
 for g in range(generations):
-    fit = []
+    genomes = []
 
-    for q in population:
-        graph_image(q)
+    for p in population:
+        graph_image(p)
 
-img = np.asarray(img_pop[0])
-fitness(imgArr, img)
-print(len(img), len(img[0]))
+    genomes = sorted(genomes, key=itemgetter(0))
 
-#img = Image.fromarray(np.uint8(img_pop[0]))
-img_pop[0].save('pic.png')
+    print(genomes[0][0])
+    population = new_generation(genomes[0][1], popSize)
+
+
 
 def circleFitness(circleIndividual, img):
     count = 0
