@@ -132,7 +132,7 @@ def mutate(indvidual, generationNum):
 
         curviness = 1.1
         crossover = 0.9
-        maxMutationAmount = (fitness*curviness - crossover*curviness)/(fitness - crossover*curviness)
+        maxMutationAmount = 1#(fitness*curviness - crossover*curviness)/(fitness - crossover*curviness)
         if fitness >= crossover: maxMutationAmount = 0
         print(fitness)
         print(maxMutationAmount)
@@ -172,7 +172,7 @@ def new_generation(best, generationNum):
 
 population = []
 popSize = 2
-indvSize = 3000
+indvSize = 2000
 generations = 1000
 
 population = init_pop(popSize, indvSize)
@@ -192,7 +192,7 @@ for g in range(generations):
     print(g)
     
     rank = sorted(rank, key=itemgetter(0))
-    if g % 10:
+    if g % 5 == 0:
         imgB = graph_image(rank[-1][1])
         img = Image.fromarray(np.uint8(imgB))
         img.save('pic' + str(g) + '.png')
