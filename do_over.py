@@ -17,26 +17,27 @@ if len(imgArr.shape) != 2:
     imgArr = imgArr[:,:,0]
 
 WIDTH, HEIGHT = imgArr.shape
-USE_CIRCLES = True
+USE_CIRCLES = False
 
 def make_circle(x, y, r, c, a):
-    return plt.Circle((x, -y), r, color=c, alpha=a)
+    return plt.Circle((x, -y), r, color='black', alpha=a)
 
 def make_square(x, y, width, height, c, a):
-    return plt.Rectangle((x, y), width, height, color=c, alpha=a)
+    return plt.Rectangle((x, -y), width, height, color='black', alpha=a)
 
 def squareFitness(square):
     x = square.get_x()
-    y = square.get_y()
+    y = -square.get_y()
     w = square.get_width()
     h = square.get_height()
     o = int(255 - square.get_alpha() * 255)
+
     diff = 0
 
-    for i in range(x, x+w):
-        for j in range(y, y+h):
+    for i in range(int(x), int(x+w)):
+        for j in range(int(y), int(y+h)):
             if j >= 0 and j < WIDTH and i >= 0 and i < WIDTH:
-                diff += o - imgArr[i][j]
+                diff += o - imgArr[(WIDTH-1)-i][j]
             else:
                 diff += 255
     diff = np.abs(diff) / (w*h)
@@ -115,12 +116,32 @@ def init_pop(popSize, indvSize):
 
     return population
 
+def bound(value, adjustment, mini, maxi):
+
+    movement = value + adjustment
+    if value + adjustment > maxi:
+        movement = maxi - ((value + adjustment) - maxi)
+    elif value + adjustment < mini:
+        movement = mini + (mini - (value + adjustment))
+    
+    if movement < mini or movement > maxi:
+        return bound(movement, 0, mini, maxi)
+
+    return movement
+
 def mutate(indvidual, generationNum):
-    maxMovementChange = WIDTH / 2
+    maxMovementChange = WIDTH
+    maxHeightChange = 1
+    maxWidthChange = 1
     maxRadiusChange = 1
-    maxOpacityChange = 0.4
+    maxOpacityChange = 0
+    minAlpha = 0.05
     minRadius = 2
-    maxRadius = 3
+    maxRadius = 4
+    maxWidth = 8
+    maxHeight = 8
+    minWidth = 4
+    minHeight = 4
 
     newCircles = []
     for i in range(len(indv)):
@@ -131,40 +152,49 @@ def mutate(indvidual, generationNum):
             fitness = squareFitness(indv[i])
 
         curviness = 1.1
-        crossover = 0.9
-        maxMutationAmount = 1#(fitness*curviness - crossover*curviness)/(fitness - crossover*curviness)
+        crossover = 0.95
+        maxMutationAmount = (fitness*curviness - crossover*curviness)/(fitness - crossover*curviness)
+        #if maxMutationAmount < 0: maxMutationAmount = 0
         if fitness >= crossover: maxMutationAmount = 0
-        print(fitness)
-        print(maxMutationAmount)
-        print("----")
+
+        #print(fitness)
+        #print(maxMutationAmount)
+        #print("----")
         xMutateDirection = 1 if np.random.rand() > 0.5 else -1
         yMutateDirection = 1 if np.random.rand() > 0.5 else -1
         alphaMutateDirection = 1 if np.random.rand() > 0.5 else -1
+        widthMutateDirection = 1 if np.random.rand() > 0.5 else -1
+        heightMutateDirection = 1 if np.random.rand() > 0.5 else -1
+        
         radiusMutateDirection = 1 if np.random.rand() > 0.5 else -1
 
         radiusMove =  np.random.rand() * maxRadiusChange * maxMutationAmount * radiusMutateDirection
-        if indv[i].get_radius() + radiusMove > maxRadius or indv[i].get_radius() + radiusMove < minRadius:
-            radiusMove *= -1
-        radius = indv[i].get_radius() + radiusMove
-        
         xMove = maxMovementChange * np.random.rand() * maxMutationAmount * xMutateDirection
-        if indv[i].center[0] + xMove < radius or indv[i].center[0] + xMove > WIDTH - radius:
-            xMove *= -1
         yMove = maxMovementChange * np.random.rand() * maxMutationAmount * yMutateDirection
-        if indv[i].center[1] + yMove > -radius or indv[i].center[1] + yMove < -HEIGHT + radius:
-            yMove *= -1
+        alphaMove = maxOpacityChange * np.random.rand() * maxMutationAmount * alphaMutateDirection
+        widthMove = maxWidthChange * np.random.rand() * maxMutationAmount * widthMutateDirection
+        heightMove = maxHeightChange * np.random.rand() * maxMutationAmount * heightMutateDirection
+        
+        if USE_CIRCLES:
+            radius = bound(indv[i].get_radius(), radiusMove, minRadius, maxRadius)
+            centerX = bound(indv[i].center[0], xMove, radius, WIDTH - radius)
+            centerY = bound(indv[i].center[1], yMove, -HEIGHT + radius, -radius)
+            alpha = bound(indv[i].get_alpha(), alphaMove, minAlpha, 1)
+            newCircles.append(plt.Circle((centerX, centerY), radius, color=indv[i].get_edgecolor(), alpha=alpha))
+        else:
+            width = bound(indv[i].get_width(), widthMove, minWidth, maxWidth)
+            height = bound(indv[i].get_height(), heightMove, minHeight, maxHeight)
+            centerX = bound(indv[i].get_x(), xMove, width, WIDTH - width)
+            centerY = bound(indv[i].get_y(), yMove, -HEIGHT + height, -height)
+            alpha = bound(indv[i].get_alpha(), alphaMove, minAlpha, 1)
+            newCircles.append(plt.Rectangle((centerX, centerY), width, height, color='black', alpha=alpha))
 
-        center = (indv[i].center[0] + xMove, indv[i].center[1] + yMove)
-
-        alpha = indv[i].get_alpha()
-
-        newCircles.append(plt.Circle((center[0], center[1]), radius, color=indv[i].get_edgecolor(), alpha=alpha))
         
     return newCircles
 
 def new_generation(best, generationNum):
     population = [] # keep the original
-    for i in range(popSize - 1):
+    for i in range(popSize):
         mutated = mutate(best, generationNum)
         population.append(mutated)
     return population
@@ -172,7 +202,7 @@ def new_generation(best, generationNum):
 
 population = []
 popSize = 2
-indvSize = 2000
+indvSize = 500
 generations = 1000
 
 population = init_pop(popSize, indvSize)
@@ -188,8 +218,8 @@ for g in range(generations):
         phenome = graph_image(indv)
         fit = fitness(phenome)
         rank.append((fit, indv))
-        print(fit)
-    print(g)
+        #print(fit)
+    #print(g)
     
     rank = sorted(rank, key=itemgetter(0))
     if g % 5 == 0:
@@ -197,4 +227,5 @@ for g in range(generations):
         img = Image.fromarray(np.uint8(imgB))
         img.save('pic' + str(g) + '.png')
     population = new_generation(rank[-1][1], g)
+    time.sleep(2)
     #print(rank[-1][1])
