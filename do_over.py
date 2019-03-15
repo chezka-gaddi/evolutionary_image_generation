@@ -10,14 +10,14 @@ import copy
 import time
 from operator import itemgetter
 
-imgArr = np.asarray(Image.open('squares.jpg'), dtype=np.uint8)
+imgArr = np.asarray(Image.open('cat.jpg'), dtype=np.uint8)
 
 # If not a 2D grayscale image, convert to grayscale
 if len(imgArr.shape) != 2:
     imgArr = imgArr[:,:,0]
 
 WIDTH, HEIGHT = imgArr.shape
-USE_CIRCLES = False
+USE_CIRCLES = True
 
 def make_circle(x, y, r, c, a):
     return plt.Circle((x, -y), r, color='black', alpha=a)
@@ -96,14 +96,13 @@ def graph_image(circles):
 
 def init_pop(popSize, indvSize):
     population = []
-    h = int(HEIGHT / 6)
 
     for p in range(popSize):
         indv = []
         for i in range(indvSize):
             x, y = random.randint(5, WIDTH-5), random.randint(5, HEIGHT-5)
             if USE_CIRCLES:
-                radius = random.randint(2, 3)
+                radius = random.randint(2, 6)
                 a = np.random.rand()
                 indv.append(make_circle(x, y, radius, 'k', a))
             else:
@@ -129,11 +128,14 @@ def bound(value, adjustment, mini, maxi):
 
     return movement
 
-def mutate(indvidual, generationNum):
+fitCount = 0
+def mutate(indvidual, generationNum, printFit):
+    global fitCount
+    fitCount = 0
     maxMovementChange = WIDTH
     maxHeightChange = 1
     maxWidthChange = 1
-    maxRadiusChange = 1
+    maxRadiusChange = 4
     maxOpacityChange = 0
     minAlpha = 0.05
     minRadius = 2
@@ -152,10 +154,12 @@ def mutate(indvidual, generationNum):
             fitness = squareFitness(indv[i])
 
         curviness = 1.1
-        crossover = 0.95
+        crossover = 0.98
         maxMutationAmount = (fitness*curviness - crossover*curviness)/(fitness - crossover*curviness)
         #if maxMutationAmount < 0: maxMutationAmount = 0
-        if fitness >= crossover: maxMutationAmount = 0
+        if fitness >= crossover: 
+	    maxMutationAmount = 0
+	    fitCount += 1
 
         #print(fitness)
         #print(maxMutationAmount)
@@ -189,20 +193,20 @@ def mutate(indvidual, generationNum):
             alpha = bound(indv[i].get_alpha(), alphaMove, minAlpha, 1)
             newCircles.append(plt.Rectangle((centerX, centerY), width, height, color='black', alpha=alpha))
 
-        
+    if printFit: print(fitCount)    
     return newCircles
 
 def new_generation(best, generationNum):
     population = [] # keep the original
     for i in range(popSize):
-        mutated = mutate(best, generationNum)
+        mutated = mutate(best, generationNum, True if i == 0 else False)
         population.append(mutated)
     return population
 
 
 population = []
 popSize = 2
-indvSize = 500
+indvSize = 10000
 generations = 1000
 
 population = init_pop(popSize, indvSize)
