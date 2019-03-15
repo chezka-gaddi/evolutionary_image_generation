@@ -10,13 +10,14 @@ import copy
 import time
 from operator import itemgetter
 
-imgArr = np.asarray(Image.open('cat.jpg'), dtype=np.uint8)
+imgArr = np.asarray(Image.open('squares.jpg'), dtype=np.uint8)
 
 # If not a 2D grayscale image, convert to grayscale
 if len(imgArr.shape) != 2:
     imgArr = imgArr[:,:,0]
 
 WIDTH, HEIGHT = imgArr.shape
+USE_CIRCLES = True
 
 def make_circle(x, y, r, c, a):
     return plt.Circle((x, -y), r, color=c, alpha=a)
@@ -82,11 +83,10 @@ def graph_image(circles):
     plt.xlim(0, WIDTH)
     plt.ylim(-HEIGHT, 0)
     ax.invert_yaxis()
-    plt.axis('on')
+    plt.axis('off')
     plt.show()
     fig.canvas.draw()
-    plt.get_current_fig_manager().resize(400,434)
-    print(fig.canvas.get_width_height())
+    plt.get_current_fig_manager().resize(WIDTH,WIDTH+34)
     plt.pause(.001)
     data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
     data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
@@ -96,14 +96,13 @@ def graph_image(circles):
 def init_pop(popSize, indvSize):
     population = []
     h = int(HEIGHT / 6)
-    generateCircles = True
 
     for p in range(popSize):
         indv = []
         for i in range(indvSize):
             x, y = random.randint(5, WIDTH-5), random.randint(5, HEIGHT-5)
-            if generateCircles:
-                radius = random.randint(2, 6)
+            if USE_CIRCLES:
+                radius = random.randint(2, 3)
                 a = np.random.rand()
                 indv.append(make_circle(x, y, radius, 'k', a))
             else:
@@ -121,13 +120,23 @@ def mutate(indvidual, generationNum):
     maxRadiusChange = 1
     maxOpacityChange = 0.4
     minRadius = 2
-    maxRadius = 6
+    maxRadius = 3
 
     newCircles = []
     for i in range(len(indv)):
-        fitness = circleFitness(indv[i]) 
-        maxMutationAmount = 1 if fitness < 0.95 else 0
+        fitness = 0
+        if USE_CIRCLES:
+            fitness = circleFitness(indv[i])
+        else:
+            fitness = squareFitness(indv[i])
 
+        curviness = 1.1
+        crossover = 0.9
+        maxMutationAmount = (fitness*curviness - crossover*curviness)/(fitness - crossover*curviness)
+        if fitness >= crossover: maxMutationAmount = 0
+        print(fitness)
+        print(maxMutationAmount)
+        print("----")
         xMutateDirection = 1 if np.random.rand() > 0.5 else -1
         yMutateDirection = 1 if np.random.rand() > 0.5 else -1
         alphaMutateDirection = 1 if np.random.rand() > 0.5 else -1
@@ -162,8 +171,8 @@ def new_generation(best, generationNum):
 
 
 population = []
-popSize = 5
-indvSize = 1500
+popSize = 2
+indvSize = 3000
 generations = 1000
 
 population = init_pop(popSize, indvSize)
@@ -181,9 +190,11 @@ for g in range(generations):
         rank.append((fit, indv))
         print(fit)
     print(g)
+    
     rank = sorted(rank, key=itemgetter(0))
+    if g % 10:
+        imgB = graph_image(rank[-1][1])
+        img = Image.fromarray(np.uint8(imgB))
+        img.save('pic' + str(g) + '.png')
     population = new_generation(rank[-1][1], g)
     #print(rank[-1][1])
-imgB = graph_image(rank[-1][1])
-img = Image.fromarray(np.uint8(imgB))
-img.save('pic.png')
