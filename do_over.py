@@ -10,7 +10,9 @@ import copy
 import time
 from operator import itemgetter
 
-imgArr = np.asarray(Image.open('cat.jpg'), dtype=np.uint8)
+imgname = 'panda'
+
+imgArr = np.asarray(Image.open(imgname + '.jpg'), dtype=np.uint8)
 
 # If not a 2D grayscale image, convert to grayscale
 if len(imgArr.shape) != 2:
@@ -47,7 +49,7 @@ def circleFitness(cir):
     x = int(cir.center[0])
     y = int(-cir.center[1])
     r = int(cir.get_radius())
-    o = int(255 - cir.get_alpha() * 255)
+    o = int(cir.get_alpha() * 255)
     diff = 0
     for i in range(y-r, y+r):
         j = x
@@ -65,7 +67,7 @@ def circleFitness(cir):
                 diff += 255
             j += 1
     diff = np.abs(diff) / (np.pi * r * r)
-    return 1 - diff / 255
+    return 1-diff / 255
 
 def fitness(genome):
     #print(genome.shape)
@@ -102,8 +104,8 @@ def init_pop(popSize, indvSize):
         for i in range(indvSize):
             x, y = random.randint(5, WIDTH-5), random.randint(5, HEIGHT-5)
             if USE_CIRCLES:
-                radius = random.randint(2, 6)
-                a = np.random.rand()
+                radius = random.randint(2, 4)
+                a = np.random.rand()/4
                 indv.append(make_circle(x, y, radius, 'k', a))
             else:
                 width = random.randint(2, 6)
@@ -136,7 +138,7 @@ def mutate(indvidual, generationNum, printFit):
     maxHeightChange = 1
     maxWidthChange = 1
     maxRadiusChange = 4
-    maxOpacityChange = 0
+    maxOpacityChange = .1
     minAlpha = 0.05
     minRadius = 2
     maxRadius = 4
@@ -154,7 +156,7 @@ def mutate(indvidual, generationNum, printFit):
             fitness = squareFitness(indv[i])
 
         curviness = 1.1
-        crossover = 0.98
+        crossover = .99
         maxMutationAmount = (fitness*curviness - crossover*curviness)/(fitness - crossover*curviness)
         #if maxMutationAmount < 0: maxMutationAmount = 0
         if fitness >= crossover: 
@@ -206,7 +208,7 @@ def new_generation(best, generationNum):
 
 population = []
 popSize = 2
-indvSize = 10000
+indvSize = 4000
 generations = 1000
 
 population = init_pop(popSize, indvSize)
@@ -223,13 +225,11 @@ for g in range(generations):
         fit = fitness(phenome)
         rank.append((fit, indv))
         #print(fit)
-    #print(g)
     
     rank = sorted(rank, key=itemgetter(0))
     if g % 5 == 0:
         imgB = graph_image(rank[-1][1])
         img = Image.fromarray(np.uint8(imgB))
-        img.save('pic' + str(g) + '.png')
+        img.save(imgname + str(g) + '.png')
     population = new_generation(rank[-1][1], g)
-    time.sleep(2)
     #print(rank[-1][1])
